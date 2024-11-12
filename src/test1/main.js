@@ -1,13 +1,16 @@
 import '../style.css'
 
 import {
+  BoxGeometry,
   CircleGeometry,
   Clock,
   Color,
   DirectionalLight,
+  DoubleSide,
   InstancedMesh,
   PerspectiveCamera,
-  Scene
+  Scene,
+  SphereGeometry
 } from 'three'
 
 import { clamp, code, Fn, hash, instanceIndex, length, smoothstep, storage, StorageInstancedBufferAttribute, uniform, vec3, WebGPURenderer, wgslFn } from 'three/tsl'
@@ -142,7 +145,7 @@ function App () {
 
       const rotation = rotationBuffer.element(instanceIndex)
       const deltaRotation = deltaRotationBuffer.element(instanceIndex)
-      rotation.addAssign(deltaRotation.mul(0.05))
+      rotation.addAssign(deltaRotation.mul(0.025))
     })().compute(COUNT)
   }
 
@@ -162,7 +165,14 @@ function App () {
     material.colorNode = colorBuffer.toAttribute()
     material.time = time
 
-    particles = new InstancedMesh(new CircleGeometry(1, 12), material, COUNT)
+    // const geometry = new PlaneGeometry(1, 1, 1)
+    // const geometry = new CircleGeometry(1, 12)
+    // material.side = DoubleSide
+    const geometry = new BoxGeometry(1, 1, 1)
+    // const geometry = new SphereGeometry(1, 5, 3)
+    // material.flatShading = true
+
+    particles = new InstancedMesh(geometry, material, COUNT)
     particles.frustumCulled = false
     scene.add(particles)
 
