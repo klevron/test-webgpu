@@ -18,12 +18,18 @@ function App () {
 
   const particlesParams = {
     count: 250000,
-    materialParams: { metalness: 0.75, roughness: 0.25, side: FrontSide }
+    type: 'octahedron',
+    size: 1,
+    materialParams: { metalness: 0.75, roughness: 0.25, side: FrontSide },
+    maxVelocity: 0.1
   }
 
   const sceneParams = {
-    pause: false
+    pause: false,
+    rotate: true
   }
+
+  let pane, debugFolder
 
   init()
 
@@ -71,10 +77,12 @@ function App () {
   }
 
   function initDebug () {
-    const pane = new Pane()
-    const partFolder = pane.addFolder({ title: 'Particles', expanded: false })
+    if (!pane) pane = new Pane()
+    if (debugFolder) debugFolder.dispose()
+    debugFolder = pane.addFolder({ title: 'Debug', expanded: true })
 
-    partFolder.addBinding(sceneParams, 'pause')
+    debugFolder.addBinding(sceneParams, 'pause')
+    debugFolder.addBinding(sceneParams, 'rotate')
 
     const countOptions = [
       { value: 100000, text: '100k' },
@@ -84,11 +92,11 @@ function App () {
       { value: 2000000, text: '2M' },
       { value: 4000000, text: '4M' }
     ]
-    partFolder.addBinding(particlesParams, 'count', { options: countOptions }).on('change', (ev) => {
+    debugFolder.addBinding(particlesParams, 'count', { options: countOptions }).on('change', (ev) => {
       createParticles()
+      initDebug()
     })
 
-    const geo = { type: 'octahedron' }
     const geoOptions = [
       { value: 'box', text: 'Box' },
       { value: 'circle', text: 'Circle' },
@@ -96,25 +104,25 @@ function App () {
       { value: 'plane', text: 'Plane' },
       { value: 'sphere', text: 'Sphere' }
     ]
-    partFolder.addBinding(geo, 'type', { options: geoOptions }).on('change', (ev) => {
-      // particles.geometry = getGeometry(geo.type) // doesn't work
-      createParticles(geo.type)
+    debugFolder.addBinding(particlesParams, 'type', { options: geoOptions }).on('change', (ev) => {
+      // particles.geometry = getGeometry(ev.value) // doesn't work
+      createParticles(ev.value)
+      initDebug()
     })
 
-    partFolder.addBinding(particles.uniforms.size, 'value', { label: 'size', min: 0.1, max: 2, step: 0.001 })
+    debugFolder.addBinding(particles.uniforms.size, 'value', { label: 'size', min: 0.1, max: 5, step: 0.001 }).on('change', (ev) => { particlesParams.size = ev.value })
 
     // partFolder.addBinding(particles.uniforms.noiseCoordScale, 'value', { min: 0.0001, max: 0.5, step: 0.0001 })
     // partFolder.addBinding(particles.uniforms.noiseIntensity, 'value', { min: 0, max: 0.1, step: 0.0001 })
-    partFolder.addBinding(particles.uniforms.maxVelocity, 'value', { label: 'max velocity', min: 0, max: 0.3, step: 0.0001 })
+    debugFolder.addBinding(particles.uniforms.maxVelocity, 'value', { label: 'max velocity', min: 0, max: 0.3, step: 0.0001 }).on('change', (ev) => { particlesParams.maxVelocity = ev.value })
 
-    partFolder.addBinding(particles.material, 'metalness', { min: 0, max: 1, step: 0.01 }).on('change', (ev) => { particlesParams.materialParams.metalness = particles.material.metalness })
-    partFolder.addBinding(particles.material, 'roughness', { min: 0, max: 1, step: 0.01 }).on('change', (ev) => { particlesParams.materialParams.roughness = particles.material.roughness })
+    debugFolder.addBinding(particles.material, 'metalness', { min: 0, max: 1, step: 0.01 }).on('change', (ev) => { particlesParams.materialParams.metalness = ev.value })
+    debugFolder.addBinding(particles.material, 'roughness', { min: 0, max: 1, step: 0.01 }).on('change', (ev) => { particlesParams.materialParams.roughness = ev.value })
 
-    const lightsFolder = pane.addFolder({ title: 'Lights', expanded: false })
-    lightsFolder.addBinding(particles.light1, 'color', { label: 'light1', color: { type: 'float' } })
-    lightsFolder.addBinding(particles.light1, 'intensity', { min: 0, max: 10, step: 0.01 })
-    lightsFolder.addBinding(particles.light2, 'color', { label: 'light2', color: { type: 'float' } })
-    lightsFolder.addBinding(particles.light2, 'intensity', { min: 0, max: 10, step: 0.01 })
+    debugFolder.addBinding(particles.light1, 'color', { label: 'light1', color: { type: 'float' } })
+    debugFolder.addBinding(particles.light1, 'intensity', { min: 0, max: 10, step: 0.01 })
+    debugFolder.addBinding(particles.light2, 'color', { label: 'light2', color: { type: 'float' } })
+    debugFolder.addBinding(particles.light2, 'intensity', { min: 0, max: 10, step: 0.01 })
   }
 
   function animate () {
@@ -124,9 +132,11 @@ function App () {
     if (!sceneParams.pause) {
       time.elapsed += time.delta
       particles.update(time)
-      particles.rotation.x = Math.sin(time.elapsed * 0.03) * Math.PI
-      particles.rotation.y = Math.cos(time.elapsed * 0.05) * Math.PI
-      particles.rotation.z = Math.sin(time.elapsed * 0.02) * Math.PI
+      if (sceneParams.rotate) {
+        particles.rotation.x = Math.sin(time.elapsed * 0.03) * Math.PI
+        particles.rotation.y = Math.cos(time.elapsed * 0.05) * Math.PI
+        particles.rotation.z = Math.sin(time.elapsed * 0.02) * Math.PI
+      }
     }
 
     renderer.render(scene, camera)

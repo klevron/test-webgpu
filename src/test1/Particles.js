@@ -9,10 +9,11 @@ const psrdnoise3WGSL = wgslFn(psrdnoise3, [code(psrdnoise3Common)])
 
 const defaultConfig = {
   count: 512 * 512,
+  size: 1,
   materialParams: { metalness: 0.75, roughness: 0.25 },
   noiseCoordScale: 0.01,
   noiseIntensity: 0.0025,
-  noiseTimeCoef: 1.5,
+  noiseTimeCoef: 0.375,
   attractionRadius1: 250,
   attractionRadius2: 350,
   maxVelocity: 0.1
@@ -31,7 +32,7 @@ export default class Particles extends InstancedMesh {
     this.initLights()
 
     this.compute = new ParticlesCompute(renderer, this.params)
-    this.uniforms = { ...this.compute.uniforms, size: uniform(1) }
+    this.uniforms = { ...this.compute.uniforms, size: uniform(this.params.size) }
 
     this.material.size = this.uniforms.size
     this.material.positionNode = this.compute.positionBuffer.toAttribute()
@@ -67,13 +68,14 @@ class ParticlesCompute {
     this.renderer = renderer
     this.params = params
 
-    const time = uniform(0.0)
+    const timeDelta = uniform(0.0)
+    const timeNoise = uniform(0.0)
     const noiseCoordScale = uniform(params.noiseCoordScale)
     const noiseIntensity = uniform(params.noiseIntensity)
     const attractionRadius1 = uniform(params.attractionRadius1)
     const attractionRadius2 = uniform(params.attractionRadius2)
     const maxVelocity = uniform(params.maxVelocity)
-    this.uniforms = { time, noiseCoordScale, noiseIntensity, attractionRadius1, attractionRadius2, maxVelocity }
+    this.uniforms = { timeDelta, timeNoise, noiseCoordScale, noiseIntensity, attractionRadius1, attractionRadius2, maxVelocity }
 
     const createBuffer = (count, i = 3) => storage(new StorageInstancedBufferAttribute(count, i), 'vec' + i, count)
     const positionBuffer = this.positionBuffer = createBuffer(params.count, 4)
@@ -109,7 +111,7 @@ class ParticlesCompute {
       const rand9 = hash(instanceIndex.add(9))
       const rand10 = hash(instanceIndex.add(10))
       const rand11 = hash(instanceIndex.add(11))
-      deltaRotation.assign(vec3(rand9, rand10, rand11).mul(0.5).add(0.25))
+      deltaRotation.assign(vec3(rand9, rand10, rand11).add(0.25))
 
       // init velocity
       const rand12 = hash(instanceIndex.add(12))
@@ -128,7 +130,7 @@ class ParticlesCompute {
       const velocity = velocityBuffer.element(instanceIndex)
 
       // noise
-      const psrd = psrdnoise3WGSL(position.xyz.mul(noiseCoordScale), vec3(0.0), time.mul(0.25)).toVar()
+      const psrd = psrdnoise3WGSL(position.xyz.mul(noiseCoordScale), vec3(0.0), timeNoise).toVar()
       const displacement = psrd.xyz.mul(noiseIntensity).mul(position.w)
       velocity.xyz.addAssign(displacement)
 
@@ -144,12 +146,13 @@ class ParticlesCompute {
 
       const rotation = rotationBuffer.element(instanceIndex)
       const deltaRotation = deltaRotationBuffer.element(instanceIndex)
-      rotation.addAssign(deltaRotation.mul(0.025))
+      rotation.addAssign(deltaRotation.mul(timeDelta))
     })().compute(params.count)
   }
 
   update (time) {
-    this.uniforms.time.value += time.delta * this.params.noiseTimeCoef
+    this.uniforms.timeDelta.value = time.delta
+    this.uniforms.timeNoise.value += time.delta * this.params.noiseTimeCoef
     this.renderer.computeAsync(this.computeParticles)
   }
 
