@@ -14,7 +14,7 @@ export default class MeshCustomNodeMaterial extends MeshStandardNodeMaterial {
 
     // const rMat = lookAt(this.velocityNode, vec3(0, 1, 0))
     const rMat = rotationXYZ(this.rotationNode)
-    const iMat = compose(this.positionNode, rMat, vec3(this.velocityNode.w))
+    const iMat = compose(this.positionNode, rMat, vec3(this.velocityNode.w).mul(this.size))
     positionLocal.assign(iMat.mul(positionLocal))
 
     const m = mat3(iMat)

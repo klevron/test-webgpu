@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-dependencies:
-  three:
-    specifier: ^0.170.0
-    version: 0.170.0
-
 devDependencies:
   '@types/three':
     specifier: ^0.169.0
@@ -28,6 +23,12 @@ devDependencies:
   eslint-plugin-promise:
     specifier: ^6.6.0
     version: 6.6.0(eslint@8.57.0)
+  three:
+    specifier: ^0.170.0
+    version: 0.170.0
+  tweakpane:
+    specifier: ^4.0.5
+    version: 4.0.5
   typescript:
     specifier: ^5.5.4
     version: 5.5.4
@@ -1968,7 +1969,7 @@ packages:
 
   /three@0.170.0:
     resolution: {integrity: sha512-FQK+LEpYc0fBD+J8g6oSEyyNzjp+Q7Ks1C568WWaoMRLW+TkNNWmenWeGgJjV105Gd+p/2ql1ZcjYvNiPZBhuQ==}
-    dev: false
+    dev: true
 
   /tsconfig-paths@3.15.0:
     resolution: {integrity: sha512-2Ac2RgzDe/cn48GvOe3M+o82pEFewD3UPbyoUHHdKasHwJKjds4fLXWf/Ux5kATBKN20oaFGu+jbElp1pos0mg==}
@@ -1977,6 +1978,10 @@ packages:
       json5: 1.0.2
       minimist: 1.2.8
       strip-bom: 3.0.0
+    dev: true
+
+  /tweakpane@4.0.5:
+    resolution: {integrity: sha512-rxEXdSI+ArlG1RyO6FghC4ZUX8JkEfz8F3v1JuteXSV0pEtHJzyo07fcDG+NsJfN5L39kSbCYbB9cBGHyuI/tQ==}
     dev: true
 
   /type-check@0.4.0:

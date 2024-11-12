@@ -15,10 +15,9 @@
     "eslint-plugin-import": "^2.30.0",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^6.6.0",
+    "three": "^0.170.0",
+    "tweakpane": "^4.0.5",
     "typescript": "^5.5.4",
     "vite": "^5.4.3"
-  },
-  "dependencies": {
-    "three": "^0.170.0"
   }
 }

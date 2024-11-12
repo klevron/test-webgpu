@@ -31,6 +31,9 @@ export default class Particles extends InstancedMesh {
     this.initLights()
 
     this.compute = new ParticlesCompute(renderer, this.params)
+    this.uniforms = { ...this.compute.uniforms, size: uniform(1) }
+
+    this.material.size = this.uniforms.size
     this.material.positionNode = this.compute.positionBuffer.toAttribute()
     this.material.rotationNode = this.compute.rotationBuffer.toAttribute()
     this.material.velocityNode = this.compute.velocityBuffer.toAttribute()
@@ -40,17 +43,22 @@ export default class Particles extends InstancedMesh {
   }
 
   initLights () {
-    const light1 = new DirectionalLight(0xff9060, 1)
+    const light1 = this.light1 = new DirectionalLight(0xff9060, 2)
     light1.position.set(-1, -1, 0)
     light1.target.position.set(0, 0, 0)
     this.add(light1)
     this.add(light1.target)
 
-    const light2 = new DirectionalLight(0x6090ff, 1)
+    const light2 = this.light2 = new DirectionalLight(0x6090ff, 2)
     light2.position.set(1, 1, 0)
     light2.target.position.set(0, 0, 0)
     this.add(light2)
     this.add(light2.target)
+  }
+
+  dispose () {
+    this.compute.dispose()
+    super.dispose()
   }
 }
 
@@ -88,22 +96,20 @@ class ParticlesCompute {
       const rand3 = hash(instanceIndex.add(3))
       const rand4 = hash(instanceIndex.add(4))
       const rand5 = hash(instanceIndex.add(5))
-      position.assign(vec3(rand1.sub(0.5), rand2.sub(0.5), rand3.sub(0.5)).normalize().mul(rand4).mul(attractionRadius1))
+      position.assign(vec3(rand1, rand2, rand3).sub(0.5).normalize().mul(rand4).mul(attractionRadius1))
       position.w = rand5.mul(0.9).add(0.1) // displacement intensity
 
       // init rotation
       const rand6 = hash(instanceIndex.add(6))
       const rand7 = hash(instanceIndex.add(7))
       const rand8 = hash(instanceIndex.add(8))
-      rotation.x = rand6.sub(0.5).mul(Math.PI * 2)
-      rotation.y = rand7.sub(0.5).mul(Math.PI * 2)
-      rotation.z = rand8.sub(0.5).mul(Math.PI * 2)
+      rotation.assign(vec3(rand6, rand7, rand8).sub(0.5).mul(Math.PI * 2))
 
       // init delta rotation
       const rand9 = hash(instanceIndex.add(9))
       const rand10 = hash(instanceIndex.add(10))
       const rand11 = hash(instanceIndex.add(11))
-      deltaRotation.assign(vec3(rand9.mul(0.5).add(0.25), rand10.mul(0.5).add(0.25), rand11.mul(0.5).add(0.25)))
+      deltaRotation.assign(vec3(rand9, rand10, rand11).mul(0.5).add(0.25))
 
       // init velocity
       const rand12 = hash(instanceIndex.add(12))
@@ -111,7 +117,7 @@ class ParticlesCompute {
       velocity.w = rand12.mul(0.75).add(0.25) // scale
 
       // init color
-      color.assign(vec3(rand1.mul(0.75).add(0.25), rand2.mul(0.75).add(0.25), rand3.mul(0.75).add(0.25)))
+      color.assign(vec3(rand1, rand2, rand3).mul(0.75).add(0.25))
     })().compute(params.count)
 
     renderer.computeAsync(computeInit)
@@ -145,5 +151,13 @@ class ParticlesCompute {
   update (time) {
     this.uniforms.time.value += time.delta * this.params.noiseTimeCoef
     this.renderer.computeAsync(this.computeParticles)
+  }
+
+  dispose () {
+    this.positionBuffer.dispose()
+    this.rotationBuffer.dispose()
+    this.deltaRotationBuffer.dispose()
+    this.velocityBuffer.dispose()
+    this.colorBuffer.dispose()
   }
 }
