@@ -59,7 +59,8 @@ export default class Particles extends InstancedMesh {
 
   dispose () {
     this.compute.dispose()
-    super.dispose()
+    this.geometry.dispose()
+    this.material.dispose()
   }
 }
 

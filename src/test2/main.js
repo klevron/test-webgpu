@@ -19,11 +19,13 @@ function App () {
   const time = { delta: 0, elapsed: 0 }
 
   const particlesParams = {
-    // count: 500,
+    count: 5000,
+    size: 1,
     materialParams: { metalness: 1, roughness: 0.1 }
   }
 
   const sceneParams = {
+    followMouse: true,
     pause: false
   }
 
@@ -57,9 +59,13 @@ function App () {
     pointer = usePointer({
       domElement: renderer.domElement,
       onMove: () => {
-        raycaster.setFromCamera(pointer.nPosition, camera)
-        camera.getWorldDirection(raycasterPlane.normal)
-        raycaster.ray.intersectPlane(raycasterPlane, raycasterIntersect)
+        if (sceneParams.followMouse) {
+          raycaster.setFromCamera(pointer.nPosition, camera)
+          camera.getWorldDirection(raycasterPlane.normal)
+          raycaster.ray.intersectPlane(raycasterPlane, raycasterIntersect)
+        } else {
+          raycasterIntersect.set(0, 0, 0)
+        }
       },
       onLeave: () => {
         raycasterIntersect.set(0, 0, 0)
@@ -76,7 +82,7 @@ function App () {
     createParticles()
   }
 
-  function createParticles (type = 'octahedron') {
+  function createParticles () {
     if (particles) {
       scene.remove(particles)
       particles.dispose()
@@ -90,9 +96,30 @@ function App () {
     if (!pane) pane = new Pane()
     if (debugFolder) debugFolder.dispose()
     debugFolder = pane.addFolder({ title: 'Debug', expanded: true })
+
+    const countOptions = [
+      { value: 1000, text: '1000' },
+      { value: 2500, text: '2500' },
+      { value: 5000, text: '5000' },
+      { value: 10000, text: '10000' },
+      { value: 20000, text: '20000' },
+      { value: 50000, text: '30000' }
+    ]
+    debugFolder.addBinding(particlesParams, 'count', { options: countOptions }).on('change', (ev) => {
+      createParticles()
+      initDebug()
+    })
+
     debugFolder.addBinding(sceneParams, 'pause')
+    debugFolder.addBinding(sceneParams, 'followMouse')
+
+    debugFolder.addBinding(particles.uniforms.size, 'value', { label: 'size', min: 0.5, max: 10, step: 0.01 }).on('change', (ev) => { particlesParams.size = ev.value })
     debugFolder.addBinding(particles.material, 'metalness', { min: 0, max: 1, step: 0.01 }).on('change', (ev) => { particlesParams.materialParams.metalness = ev.value })
     debugFolder.addBinding(particles.material, 'roughness', { min: 0, max: 1, step: 0.01 }).on('change', (ev) => { particlesParams.materialParams.roughness = ev.value })
+    debugFolder.addBinding(particles.material.thicknessDistortionNode, 'value', { label: 'thickness distortion', min: 0, max: 1, step: 0.001 })
+    debugFolder.addBinding(particles.material.thicknessAttenuationNode, 'value', { label: 'thickness attenuation', min: 0, max: 1, step: 0.001 })
+    debugFolder.addBinding(particles.material.thicknessPowerNode, 'value', { label: 'thickness power', min: 0.001, max: 20, step: 0.001 })
+    debugFolder.addBinding(particles.material.thicknessScaleNode, 'value', { label: 'thickness scale', min: 0, max: 50, step: 0.01 })
 
     debugFolder.addBinding(particles.light, 'color', { label: 'light', color: { type: 'float' } })
     debugFolder.addBinding(particles.light, 'intensity', { min: 0, max: 10, step: 0.01 })

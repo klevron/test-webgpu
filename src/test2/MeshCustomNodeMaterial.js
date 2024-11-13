@@ -1,4 +1,4 @@
-import { mat3, MeshSSSNodeMaterial, modelViewProjection, normalLocal, positionLocal, vec3, wgslFn } from 'three/tsl'
+import { mat3, MeshSSSNodeMaterial, modelViewProjection, normalLocal, positionLocal, uniform, vec3, wgslFn } from 'three/tsl'
 
 // import mat3LookAtWgsl from '../wgsl/mat3-lookAt.wgsl?raw'
 import mat3RotationXYZ from '../wgsl/mat3-rotationXYZ.wgsl?raw'
@@ -9,11 +9,22 @@ const rotationXYZ = wgslFn(mat3RotationXYZ)
 const compose = wgslFn(mat4ComposeWgsl)
 
 export default class MeshCustomNodeMaterial extends MeshSSSNodeMaterial {
+  constructor (parameters) {
+    super(parameters)
+
+    this.thicknessColorNode = null
+    this.thicknessDistortionNode = uniform(0.1)
+    this.thicknessAmbientNode = uniform(0.0)
+    this.thicknessAttenuationNode = uniform(0.1)
+    this.thicknessPowerNode = uniform(2.0)
+    this.thicknessScaleNode = uniform(10.0)
+  }
+
   setupPosition (builder) {
     builder.addStack()
 
     const rMat = rotationXYZ(vec3())
-    const iMat = compose(this.positionNode, rMat, vec3(this.positionNode.w))
+    const iMat = compose(this.positionNode, rMat, vec3(this.positionNode.w).mul(this.size))
     positionLocal.assign(iMat.mul(positionLocal))
 
     const m = mat3(iMat)
