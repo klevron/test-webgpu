@@ -5,7 +5,7 @@ import { WebGPURenderer } from 'three/tsl'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { Pane } from 'tweakpane'
 
-import Particles from './Particles'
+import Particles, { defaultParams } from './Particles'
 
 App()
 
@@ -17,11 +17,8 @@ function App () {
   const time = { delta: 0, elapsed: 0 }
 
   const particlesParams = {
-    count: 250000,
     type: 'octahedron',
-    size: 1,
-    materialParams: { metalness: 0.75, roughness: 0.25, side: FrontSide },
-    maxVelocity: 0.1
+    ...defaultParams
   }
 
   const sceneParams = {
@@ -93,7 +90,7 @@ function App () {
       { value: 4000000, text: '4M' }
     ]
     debugFolder.addBinding(particlesParams, 'count', { options: countOptions }).on('change', (ev) => {
-      createParticles()
+      createParticles(particlesParams.type)
       initDebug()
     })
 
