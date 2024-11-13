@@ -77,7 +77,7 @@ export default class ParticlesCompute {
         const dv = center.sub(position.xyz)
         const intensity = max(position.w.mul(size).mul(position.w.mul(size)), 0.1)
         velocity.xyz.addAssign(dv.normalize().mul(0.0025).mul(intensity))
-        velocity.xyz.mulAssign(0.9975)
+        velocity.xyz.mulAssign(0.999)
         velocity.xyz.assign(clampLength(velocity.xyz, maxVelocity))
         position.xyz.addAssign(velocity.xyz)
       }).Else(() => {

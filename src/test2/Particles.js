@@ -4,10 +4,10 @@ import ParticlesCompute from './ParticlesCompute'
 import MeshCustomNodeMaterial from './MeshCustomNodeMaterial'
 
 export const defaultParams = {
-  count: 1000,
+  count: 2000,
   size0: 1,
   size: 1,
-  maxVelocity: 0.03,
+  maxVelocity: 0.025,
   materialParams: { metalness: 1, roughness: 0.1 }
 }
 
