@@ -1,7 +1,8 @@
 import '../style.css'
 
 import { BoxGeometry, CircleGeometry, Clock, Color, DoubleSide, FrontSide, OctahedronGeometry, PerspectiveCamera, PlaneGeometry, Scene, SphereGeometry } from 'three'
-import { WebGPURenderer } from 'three/tsl'
+import { mrt, output, pass, PostProcessing, WebGPURenderer } from 'three/tsl'
+import { bloom } from 'three/addons/tsl/display/BloomNode.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { Pane } from 'tweakpane'
 
@@ -13,6 +14,9 @@ function App () {
   let renderer, scene, camera, cameraCtrl, clock
   let width, height
   let particles
+
+  let postprocessing
+  let bloomPass
 
   const time = { delta: 0, elapsed: 0 }
 
@@ -33,6 +37,8 @@ function App () {
   function init () {
     renderer = new WebGPURenderer({ canvas: document.getElementById('canvas'), antialias: true })
 
+    scene = new Scene()
+
     camera = new PerspectiveCamera()
     camera.position.set(0, 100, 200)
     camera.lookAt(0, 0, 0)
@@ -40,6 +46,14 @@ function App () {
     cameraCtrl = new OrbitControls(camera, renderer.domElement)
     cameraCtrl.enableDamping = true
     cameraCtrl.dampingFactor = 0.1
+
+    // postprocessing
+    postprocessing = new PostProcessing(renderer)
+    const scenePass = pass(scene, camera)
+    scenePass.setMRT(mrt({ output }))
+    const outputPass = scenePass.getTextureNode()
+    bloomPass = bloom(outputPass, 0.25, 0, 0)
+    postprocessing.outputNode = outputPass.add(bloomPass)
 
     clock = new Clock()
 
@@ -53,7 +67,6 @@ function App () {
   }
 
   function initScene () {
-    scene = new Scene()
     scene.background = new Color(0x000000)
 
     createParticles()
@@ -120,6 +133,10 @@ function App () {
     debugFolder.addBinding(particles.light1, 'intensity', { min: 0, max: 10, step: 0.01 })
     debugFolder.addBinding(particles.light2, 'color', { label: 'light2', color: { type: 'float' } })
     debugFolder.addBinding(particles.light2, 'intensity', { min: 0, max: 10, step: 0.01 })
+
+    debugFolder.addBinding(bloomPass.strength, 'value', { label: 'bloom strength', min: 0, max: 3, step: 0.001 })
+    debugFolder.addBinding(bloomPass.radius, 'value', { label: 'bloom radius', min: 0, max: 1, step: 0.001 })
+    debugFolder.addBinding(bloomPass.threshold, 'value', { label: 'bloom threshold', min: 0, max: 1, step: 0.001 })
   }
 
   function animate () {
@@ -130,13 +147,14 @@ function App () {
       time.elapsed += time.delta
       particles.update(time)
       if (sceneParams.rotate) {
-        particles.rotation.x = Math.sin(time.elapsed * 0.03) * Math.PI
-        particles.rotation.y = Math.cos(time.elapsed * 0.05) * Math.PI
-        particles.rotation.z = Math.sin(time.elapsed * 0.02) * Math.PI
+        particles.rotation.x = (particles.rotation.x + 0.001) % (Math.PI * 2)
+        particles.rotation.y = (particles.rotation.y + 0.005) % (Math.PI * 2)
+        particles.rotation.z = (particles.rotation.z + 0.003) % (Math.PI * 2)
       }
     }
 
-    renderer.render(scene, camera)
+    // renderer.render(scene, camera)
+    postprocessing.render()
   }
 
   function updateSize () {
