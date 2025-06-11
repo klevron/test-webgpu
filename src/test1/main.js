@@ -1,7 +1,7 @@
 import '../style.css'
 
-import { BoxGeometry, CircleGeometry, Clock, Color, DoubleSide, FrontSide, OctahedronGeometry, PerspectiveCamera, PlaneGeometry, Scene, SphereGeometry } from 'three'
-import { mrt, output, pass, PostProcessing, WebGPURenderer } from 'three/tsl'
+import { BoxGeometry, CircleGeometry, Clock, Color, DoubleSide, FrontSide, OctahedronGeometry, PerspectiveCamera, PlaneGeometry, PostProcessing, Scene, SphereGeometry, WebGPURenderer } from 'three/webgpu'
+import { mrt, output, pass } from 'three/tsl'
 import { bloom } from 'three/addons/tsl/display/BloomNode.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { Pane } from 'tweakpane'

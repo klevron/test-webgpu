@@ -1,5 +1,5 @@
-import { Vector3 } from 'three'
-import { float, Fn, hash, If, instanceIndex, length, Loop, max, step, storage, StorageInstancedBufferAttribute, uint, uniform, vec3, wgslFn } from 'three/tsl'
+import { StorageInstancedBufferAttribute, Vector3 } from 'three/webgpu'
+import { float, Fn, hash, If, instanceIndex, length, Loop, max, step, storage, uint, uniform, vec3, wgslFn } from 'three/tsl'
 
 export default class ParticlesCompute {
   constructor (renderer, params) {
@@ -75,9 +75,10 @@ export default class ParticlesCompute {
 
       If(instanceIndex.greaterThan(0), () => {
         const dv = center.sub(position.xyz)
-        const intensity = max(position.w.mul(size).mul(position.w.mul(size)), 0.1)
+        // const intensity = max(position.w.mul(size).mul(position.w.mul(size)), 0.1)
+        const intensity = max(position.w.mul(size), 0.1)
         velocity.xyz.addAssign(dv.normalize().mul(0.0025).mul(intensity))
-        velocity.xyz.mulAssign(0.999)
+        velocity.xyz.mulAssign(0.9975)
         velocity.xyz.assign(clampLength(velocity.xyz, maxVelocity))
         position.xyz.addAssign(velocity.xyz)
       }).Else(() => {
@@ -121,11 +122,11 @@ export default class ParticlesCompute {
     })().compute(params.count)
   }
 
-  update (time) {
+  async update (time) {
     this.uniforms.timeDelta.value = time.delta
     this.uniforms.timeElapsed.value += time.delta
-    this.renderer.computeAsync(this.computeParticles1)
-    this.renderer.computeAsync(this.computeParticles2)
+    await this.renderer.computeAsync(this.computeParticles1)
+    await this.renderer.computeAsync(this.computeParticles2)
   }
 
   dispose () {

@@ -1,4 +1,5 @@
-import { mat3, MeshSSSNodeMaterial, modelViewProjection, normalLocal, positionLocal, uniform, vec3, wgslFn } from 'three/tsl'
+import { MeshSSSNodeMaterial } from 'three/webgpu'
+import { mat3, normalLocal, positionLocal, uniform, vec3, wgslFn } from 'three/tsl'
 
 // import mat3LookAtWgsl from '../wgsl/mat3-lookAt.wgsl?raw'
 import mat3RotationXYZ from '../wgsl/mat3-rotationXYZ.wgsl?raw'
@@ -21,8 +22,6 @@ export default class MeshCustomNodeMaterial extends MeshSSSNodeMaterial {
   }
 
   setupPosition (builder) {
-    builder.addStack()
-
     const rMat = rotationXYZ(vec3())
     const iMat = compose(this.positionNode, rMat, vec3(this.positionNode.w).mul(this.size))
     positionLocal.assign(iMat.mul(positionLocal))
@@ -31,11 +30,6 @@ export default class MeshCustomNodeMaterial extends MeshSSSNodeMaterial {
     const transformedNormal = normalLocal.div(vec3(m[0].dot(m[0]), m[1].dot(m[1]), m[2].dot(m[2])))
     normalLocal.assign(rMat.mul(transformedNormal).xyz)
 
-    const mvp = modelViewProjection()
-
-    builder.context.vertex = builder.removeStack()
-    builder.context.mvp = mvp
-
-    return mvp
+		return positionLocal
   }
 }

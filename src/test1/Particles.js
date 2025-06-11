@@ -1,4 +1,4 @@
-import { DirectionalLight, InstancedMesh } from 'three'
+import { DirectionalLight, InstancedMesh } from 'three/webgpu'
 import { uniform } from 'three/tsl'
 
 import ParticlesCompute from './ParticlesCompute'

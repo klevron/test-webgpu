@@ -1,4 +1,4 @@
-import { DirectionalLight, InstancedMesh, PointLight, SphereGeometry } from 'three'
+import { DirectionalLight, InstancedMesh, PointLight, SphereGeometry } from 'three/webgpu'
 
 import ParticlesCompute from './ParticlesCompute'
 import MeshCustomNodeMaterial from './MeshCustomNodeMaterial'

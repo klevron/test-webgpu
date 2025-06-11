@@ -1,4 +1,5 @@
-import { clamp, code, Fn, hash, instanceIndex, length, smoothstep, storage, StorageInstancedBufferAttribute, uniform, vec3, wgslFn } from 'three/tsl'
+import { StorageInstancedBufferAttribute } from 'three/webgpu'
+import { clamp, code, Fn, hash, instanceIndex, length, smoothstep, storage, uniform, vec3, wgslFn } from 'three/tsl'
 
 import psrdnoise3 from '../wgsl/psrdnoise3.wgsl?raw'
 import psrdnoise3Common from '../wgsl/psrdnoise3-common.wgsl?raw'
@@ -19,12 +20,12 @@ export default class ParticlesCompute {
     const maxVelocity = uniform(params.maxVelocity)
     this.uniforms = { timeDelta, timeNoise, noiseCoordScale, noiseIntensity, attractionRadius1, attractionRadius2, maxVelocity }
 
-    const createBuffer = (count, i = 3) => storage(new StorageInstancedBufferAttribute(count, i), 'vec' + i, count)
-    const positionBuffer = this.positionBuffer = createBuffer(params.count, 4)
-    const rotationBuffer = this.rotationBuffer = createBuffer(params.count)
-    const deltaRotationBuffer = this.deltaRotationBuffer = createBuffer(params.count)
-    const velocityBuffer = this.velocityBuffer = createBuffer(params.count, 4)
-    const colorBuffer = this.colorBuffer = createBuffer(params.count)
+    const createBuffer = (count, i = 3, label) => storage(new StorageInstancedBufferAttribute(count, i), 'vec' + i, count).label(label)
+    const positionBuffer = this.positionBuffer = createBuffer(params.count, 4, 'positionBuffer')
+    const rotationBuffer = this.rotationBuffer = createBuffer(params.count, 3, 'rotationBuffer')
+    const deltaRotationBuffer = this.deltaRotationBuffer = createBuffer(params.count, 3, 'deltaRotationBuffer')
+    const velocityBuffer = this.velocityBuffer = createBuffer(params.count, 4, 'velocityBuffer')
+    const colorBuffer = this.colorBuffer = createBuffer(params.count, 3, 'colorBuffer')
 
     // init function
     const computeInit = Fn(() => {

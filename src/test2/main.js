@@ -1,7 +1,7 @@
 import '../style.css'
 
-import { ACESFilmicToneMapping, Clock, DataTexture, PerspectiveCamera, Plane, Raycaster, RepeatWrapping, Scene, Vector3 } from 'three'
-import { mrt, normalView, output, pass, PostProcessing, texture, WebGPURenderer } from 'three/tsl'
+import { ACESFilmicToneMapping, Clock, DataTexture, PerspectiveCamera, Plane, PostProcessing, Raycaster, RepeatWrapping, Scene, Vector3, WebGPURenderer } from 'three/webgpu'
+import { mrt, normalView, output, pass } from 'three/tsl'
 import { ao } from 'three/addons/tsl/display/GTAONode.js'
 import { denoise } from 'three/addons/tsl/display/DenoiseNode.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
@@ -65,8 +65,7 @@ function App () {
     aoPass.thickness.value = 2
     // const blendPassAO = aoPass.getTextureNode().mul(scenePassColor)
     // denoise
-    const noiseTexture = texture(generateNoiseTexture())
-    denoisePass = denoise(aoPass.getTextureNode(), scenePassDepth, scenePassNormal, noiseTexture, camera)
+    denoisePass = denoise(aoPass.getTextureNode(), scenePassDepth, scenePassNormal, camera)
     const blendPassDenoise = denoisePass.mul(scenePassColor)
     postprocessing.outputNode = blendPassDenoise
 
