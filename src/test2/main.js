@@ -1,11 +1,10 @@
 import '../style.css'
 
-import { ACESFilmicToneMapping, Clock, DataTexture, PerspectiveCamera, Plane, PostProcessing, Raycaster, RepeatWrapping, Scene, Vector3, WebGPURenderer } from 'three/webgpu'
+import { ACESFilmicToneMapping, Clock, PerspectiveCamera, Plane, PostProcessing, Raycaster, Scene, Vector3, WebGPURenderer } from 'three/webgpu'
 import { mrt, normalView, output, pass } from 'three/tsl'
 import { ao } from 'three/addons/tsl/display/GTAONode.js'
 import { denoise } from 'three/addons/tsl/display/DenoiseNode.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { SimplexNoise } from 'three/addons/math/SimplexNoise.js'
 
 import { Pane } from 'tweakpane'
 
@@ -164,7 +163,7 @@ function App () {
     // debugFolder.addBinding(denoisePass.normalPhi, 'value', { label: 'denoise normalPhi', min: 0.001, max: 10, step: 0.001 })
   }
 
-  function animate () {
+  async function animate () {
     if (cameraCtrl) cameraCtrl.update()
     time.delta = clock.getDelta()
 
@@ -172,11 +171,11 @@ function App () {
       time.elapsed += time.delta
       particles.uniforms.center.value.lerp(raycasterIntersect, 0.1)
       particles.light.position.copy(particles.uniforms.center.value)
-      particles.update(time)
+      await particles.update(time)
     }
 
-    // renderer.render(scene, camera)
-    postprocessing.render()
+    // await renderer.renderAsync(scene, camera)
+    await postprocessing.renderAsync()
   }
 
   function updateSize () {
@@ -188,31 +187,4 @@ function App () {
       camera.updateProjectionMatrix()
     }
   }
-}
-
-// From https://github.com/mrdoob/three.js/blob/master/examples/webgpu_postprocessing_ao.html
-function generateNoiseTexture (size = 64) {
-  const simplex = new SimplexNoise()
-
-  const arraySize = size * size * 4
-  const data = new Uint8Array(arraySize)
-
-  for (let i = 0; i < size; i++) {
-    for (let j = 0; j < size; j++) {
-      const x = i
-      const y = j
-
-      data[(i * size + j) * 4] = (simplex.noise(x, y) * 0.5 + 0.5) * 255
-      data[(i * size + j) * 4 + 1] = (simplex.noise(x + size, y) * 0.5 + 0.5) * 255
-      data[(i * size + j) * 4 + 2] = (simplex.noise(x, y + size) * 0.5 + 0.5) * 255
-      data[(i * size + j) * 4 + 3] = (simplex.noise(x + size, y + size) * 0.5 + 0.5) * 255
-    }
-  }
-
-  const noiseTexture = new DataTexture(data, size, size)
-  noiseTexture.wrapS = RepeatWrapping
-  noiseTexture.wrapT = RepeatWrapping
-  noiseTexture.needsUpdate = true
-
-  return noiseTexture
 }

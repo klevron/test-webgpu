@@ -2,9 +2,11 @@ import { DirectionalLight, InstancedMesh, PointLight, SphereGeometry } from 'thr
 
 import ParticlesCompute from './ParticlesCompute'
 import MeshCustomNodeMaterial from './MeshCustomNodeMaterial'
+import { Fn } from 'three/src/nodes/TSL.js'
+import { attribute, instanceIndex } from 'three/tsl'
 
 export const defaultParams = {
-  count: 2000,
+  count: 2048,
   size0: 1,
   size: 1,
   maxVelocity: 0.025,
@@ -30,16 +32,22 @@ export default class Particles extends InstancedMesh {
     this.uniforms.maxVelocity.value = this.params.maxVelocity
 
     this.material.size = this.uniforms.size
-    this.material.positionNode = this.compute.positionBuffer.toAttribute()
-    this.material.velocityNode = this.compute.velocityBuffer.toAttribute()
     this.material.colorNode = this.compute.colorBuffer.toAttribute()
     this.material.thicknessColorNode = this.compute.colorBuffer.toAttribute()
+
+    this.material.positionNode = Fn(() => {
+      const particlePosition = this.compute.positionBuffer.element(instanceIndex)
+      return attribute('position').mul(particlePosition.w.mul(this.material.size)).add(particlePosition)
+    })()
+
     // this.material.thicknessDistortionNode.value = 0.1 // default 0.1
     this.material.thicknessAttenuationNode.value = 0.125 // default 0.1
     // this.material.thicknessPowerNode.value = 2 // default 2
     // this.material.thicknessScaleNode.value = 10 // default 10
+  }
 
-    this.update = this.compute.update.bind(this.compute)
+  async update (time) {
+    await this.compute.update(time)
   }
 
   initLights () {
