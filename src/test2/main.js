@@ -24,6 +24,12 @@ function App () {
 
   const time = { delta: 0, elapsed: 0 }
 
+  const urlParams = new URLSearchParams(window.location.search)
+
+  const particlesParams = {
+    count: urlParams.get('count') ? parseInt(urlParams.get('count')) : defaultParams.count
+  }
+
   const sceneParams = {
     followMouse: true,
     pause: false
@@ -92,6 +98,10 @@ function App () {
       }
     })
 
+    document.body.addEventListener('keydown', (ev) => {
+      if (ev.key === ' ') sceneParams.pause = !sceneParams.pause
+    })
+
     renderer.setAnimationLoop(animate)
   }
 
@@ -100,18 +110,12 @@ function App () {
   }
 
   function createParticles () {
-    if (particles) {
-      scene.remove(particles)
-      particles.dispose()
-    }
-
-    particles = new Particles(renderer)
+    particles = new Particles(renderer, particlesParams)
     scene.add(particles)
   }
 
   function initDebug () {
-    if (!pane) pane = new Pane()
-    if (debugFolder) debugFolder.dispose()
+    pane = new Pane()
     debugFolder = pane.addFolder({ title: 'Debug', expanded: true })
 
     const countOptions = [
@@ -122,9 +126,9 @@ function App () {
       { value: 20000, text: '20k' },
       { value: 50000, text: '30k' }
     ]
-    debugFolder.addBinding(defaultParams, 'count', { options: countOptions }).on('change', (ev) => {
-      createParticles()
-      initDebug()
+    debugFolder.addBinding(particlesParams, 'count', { options: countOptions }).on('change', (ev) => {
+      urlParams.set('count', ev.value)
+      window.location.search = urlParams.toString()
     })
 
     debugFolder.addBinding(sceneParams, 'pause')

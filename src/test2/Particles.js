@@ -6,7 +6,7 @@ import { Fn } from 'three/src/nodes/TSL.js'
 import { attribute, instanceIndex } from 'three/tsl'
 
 export const defaultParams = {
-  count: 2048,
+  count: 2000,
   size0: 1,
   size: 1,
   maxVelocity: 0.025,
