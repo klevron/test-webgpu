@@ -20,9 +20,12 @@ function App () {
 
   const time = { delta: 0, elapsed: 0 }
 
+  const urlParams = new URLSearchParams(window.location.search)
+
   const particlesParams = {
-    type: 'octahedron',
-    ...defaultParams
+    ...defaultParams,
+    type: urlParams.get('type') ?? 'octahedron',
+    count: urlParams.get('count') ? parseInt(urlParams.get('count')) : 250000
   }
 
   const sceneParams = {
@@ -72,23 +75,17 @@ function App () {
     createParticles()
   }
 
-  function createParticles (type = 'octahedron') {
-    if (particles) {
-      scene.remove(particles)
-      particles.dispose()
-    }
-
-    particlesParams.geometry = getGeometry(type)
+  function createParticles () {
+    particlesParams.geometry = getGeometry(particlesParams.type)
 
     particles = new Particles(renderer, particlesParams)
-    particles.material.side = ['box', 'octahedron', 'sphere'].includes(type) ? FrontSide : DoubleSide
-    particles.material.flatShading = type === 'sphere'
+    particles.material.side = ['box', 'octahedron', 'sphere'].includes(particlesParams.type) ? FrontSide : DoubleSide
+    particles.material.flatShading = particlesParams.type === 'sphere'
     scene.add(particles)
   }
 
   function initDebug () {
-    if (!pane) pane = new Pane()
-    if (debugFolder) debugFolder.dispose()
+    pane = new Pane()
     debugFolder = pane.addFolder({ title: 'Debug', expanded: true })
 
     debugFolder.addBinding(sceneParams, 'pause')
@@ -103,8 +100,8 @@ function App () {
       { value: 4000000, text: '4M' }
     ]
     debugFolder.addBinding(particlesParams, 'count', { options: countOptions }).on('change', (ev) => {
-      createParticles(particlesParams.type)
-      initDebug()
+      urlParams.set('count', ev.value)
+      window.location.search = urlParams.toString()
     })
 
     const geoOptions = [
@@ -115,9 +112,8 @@ function App () {
       { value: 'sphere', text: 'Sphere' }
     ]
     debugFolder.addBinding(particlesParams, 'type', { options: geoOptions }).on('change', (ev) => {
-      // particles.geometry = getGeometry(ev.value) // doesn't work
-      createParticles(ev.value)
-      initDebug()
+      urlParams.set('type', ev.value)
+      window.location.search = urlParams.toString()
     })
 
     debugFolder.addBinding(particles.uniforms.size, 'value', { label: 'size', min: 0.1, max: 5, step: 0.001 }).on('change', (ev) => { particlesParams.size = ev.value })
@@ -139,13 +135,13 @@ function App () {
     debugFolder.addBinding(bloomPass.threshold, 'value', { label: 'bloom threshold', min: 0, max: 1, step: 0.001 })
   }
 
-  function animate () {
+  async function animate () {
     if (cameraCtrl) cameraCtrl.update()
     time.delta = clock.getDelta()
 
     if (!sceneParams.pause) {
       time.elapsed += time.delta
-      particles.update(time)
+      await particles.update(time)
       if (sceneParams.rotate) {
         particles.rotation.x = (particles.rotation.x + 0.001) % (Math.PI * 2)
         particles.rotation.y = (particles.rotation.y + 0.005) % (Math.PI * 2)
@@ -153,8 +149,8 @@ function App () {
       }
     }
 
-    // renderer.render(scene, camera)
-    postprocessing.render()
+    // await renderer.renderAsync(scene, camera)
+    await postprocessing.renderAsync()
   }
 
   function updateSize () {

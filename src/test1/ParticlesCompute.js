@@ -1,10 +1,9 @@
-import { StorageInstancedBufferAttribute } from 'three/webgpu'
-import { clamp, code, Fn, hash, instanceIndex, length, smoothstep, storage, uniform, vec3, wgslFn } from 'three/tsl'
+import { Vector4 } from 'three'
+import { clamp, Fn, instancedArray, instanceIndex, length, smoothstep, uniform, vec3 } from 'three/tsl'
 
-import psrdnoise3 from '../wgsl/psrdnoise3.wgsl?raw'
-import psrdnoise3Common from '../wgsl/psrdnoise3-common.wgsl?raw'
+import { psrdnoise3Fn } from '../tsl/psrdnoise3.js'
 
-const psrdnoise3WGSL = wgslFn(psrdnoise3, [code(psrdnoise3Common)])
+const rnd = Math.random
 
 export default class ParticlesCompute {
   constructor (renderer, params) {
@@ -20,52 +19,37 @@ export default class ParticlesCompute {
     const maxVelocity = uniform(params.maxVelocity)
     this.uniforms = { timeDelta, timeNoise, noiseCoordScale, noiseIntensity, attractionRadius1, attractionRadius2, maxVelocity }
 
-    const createBuffer = (count, i = 3, label) => storage(new StorageInstancedBufferAttribute(count, i), 'vec' + i, count).label(label)
-    const positionBuffer = this.positionBuffer = createBuffer(params.count, 4, 'positionBuffer')
-    const rotationBuffer = this.rotationBuffer = createBuffer(params.count, 3, 'rotationBuffer')
-    const deltaRotationBuffer = this.deltaRotationBuffer = createBuffer(params.count, 3, 'deltaRotationBuffer')
-    const velocityBuffer = this.velocityBuffer = createBuffer(params.count, 4, 'velocityBuffer')
-    const colorBuffer = this.colorBuffer = createBuffer(params.count, 3, 'colorBuffer')
+    const positionData = (() => {
+      const data = new Float32Array(params.count * 4)
+      const pos = new Vector4()
+      for (let i = 0; i < params.count; i++) {
+        pos.set(rnd(), rnd(), rnd(), 0)
+        pos.subScalar(0.5).normalize().multiplyScalar(rnd() * params.attractionRadius1)
+        pos.w = rnd() * 0.9 + 0.1 // displacement intensity
+        pos.toArray(data, i * 4)
+      }
+      return data
+    })()
 
-    // init function
-    const computeInit = Fn(() => {
-      const position = positionBuffer.element(instanceIndex)
-      const rotation = rotationBuffer.element(instanceIndex)
-      const deltaRotation = deltaRotationBuffer.element(instanceIndex)
-      const velocity = velocityBuffer.element(instanceIndex)
-      const color = colorBuffer.element(instanceIndex)
+    const velocityData = (() => {
+      const data = new Float32Array(params.count * 4)
+      const v = new Vector4()
+      for (let i = 0; i < params.count; i++) {
+        v.set(0, 0, 0, rnd() * 0.75 + 0.25) // w : scale
+        v.toArray(data, i * 4)
+      }
+      return data
+    })()
 
-      // init position
-      const rand1 = hash(instanceIndex)
-      const rand2 = hash(instanceIndex.add(2))
-      const rand3 = hash(instanceIndex.add(3))
-      const rand4 = hash(instanceIndex.add(4))
-      const rand5 = hash(instanceIndex.add(5))
-      position.assign(vec3(rand1, rand2, rand3).sub(0.5).normalize().mul(rand4).mul(attractionRadius1))
-      position.w = rand5.mul(0.9).add(0.1) // displacement intensity
+    const rotationData = new Float32Array(params.count * 3).fill(0).map(() => (rnd() - 0.5) * Math.PI * 2)
+    const deltaRotationData = new Float32Array(params.count * 3).fill(0).map(() => rnd() + 0.25)
+    const colorData = new Float32Array(params.count * 3).fill(0).map(() => (rnd() * 0.75 + 0.25))
 
-      // init rotation
-      const rand6 = hash(instanceIndex.add(6))
-      const rand7 = hash(instanceIndex.add(7))
-      const rand8 = hash(instanceIndex.add(8))
-      rotation.assign(vec3(rand6, rand7, rand8).sub(0.5).mul(Math.PI * 2))
-
-      // init delta rotation
-      const rand9 = hash(instanceIndex.add(9))
-      const rand10 = hash(instanceIndex.add(10))
-      const rand11 = hash(instanceIndex.add(11))
-      deltaRotation.assign(vec3(rand9, rand10, rand11).add(0.25))
-
-      // init velocity
-      const rand12 = hash(instanceIndex.add(12))
-      velocity.xyz.assign(vec3(0))
-      velocity.w = rand12.mul(0.75).add(0.25) // scale
-
-      // init color
-      color.assign(vec3(rand1, rand2, rand3).mul(0.75).add(0.25))
-    })().compute(params.count)
-
-    renderer.computeAsync(computeInit)
+    const positionBuffer = this.positionBuffer = instancedArray(positionData, 'vec4') // .setPBO(true) // setPBO(true) is only important for the WebGL Fallback
+    const velocityBuffer = this.velocityBuffer = instancedArray(velocityData, 'vec4')
+    const rotationBuffer = this.rotationBuffer = instancedArray(rotationData, 'vec3')
+    const deltaRotationBuffer = this.deltaRotationBuffer = instancedArray(deltaRotationData, 'vec3')
+    this.colorBuffer = instancedArray(colorData, 'vec3')
 
     // update function
     this.computeParticles = Fn(() => {
@@ -73,7 +57,7 @@ export default class ParticlesCompute {
       const velocity = velocityBuffer.element(instanceIndex)
 
       // noise
-      const psrd = psrdnoise3WGSL(position.xyz.mul(noiseCoordScale), vec3(0.0), timeNoise).toVar()
+      const psrd = psrdnoise3Fn(position.xyz.mul(noiseCoordScale), vec3(0.0), timeNoise).toVar()
       const displacement = psrd.xyz.mul(noiseIntensity).mul(position.w)
       velocity.xyz.addAssign(displacement)
 
@@ -93,10 +77,10 @@ export default class ParticlesCompute {
     })().compute(params.count)
   }
 
-  update (time) {
+  async update (time) {
     this.uniforms.timeDelta.value = time.delta
     this.uniforms.timeNoise.value += time.delta * this.params.noiseTimeCoef
-    this.renderer.computeAsync(this.computeParticles)
+    await this.renderer.computeAsync(this.computeParticles)
   }
 
   dispose () {

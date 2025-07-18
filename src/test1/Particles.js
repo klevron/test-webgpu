@@ -1,8 +1,8 @@
-import { DirectionalLight, InstancedMesh } from 'three/webgpu'
-import { uniform } from 'three/tsl'
+import { DirectionalLight, InstancedMesh, MeshStandardNodeMaterial } from 'three/webgpu'
+import { attribute, Fn, normalLocal, rotate, uniform } from 'three/tsl'
 
 import ParticlesCompute from './ParticlesCompute'
-import MeshCustomNodeMaterial from './MeshCustomNodeMaterial'
+// import MeshCustomNodeMaterial from './MeshCustomNodeMaterial'
 
 export const defaultParams = {
   count: 250000,
@@ -20,7 +20,7 @@ export default class Particles extends InstancedMesh {
   constructor (renderer, params) {
     const _params = { ...defaultParams, ...params }
 
-    const material = new MeshCustomNodeMaterial(_params.materialParams)
+    const material = new MeshStandardNodeMaterial(_params.materialParams)
 
     super(_params.geometry, material, _params.count)
     this.params = _params
@@ -32,12 +32,23 @@ export default class Particles extends InstancedMesh {
     this.uniforms = { ...this.compute.uniforms, size: uniform(this.params.size) }
 
     this.material.size = this.uniforms.size
-    this.material.positionNode = this.compute.positionBuffer.toAttribute()
-    this.material.rotationNode = this.compute.rotationBuffer.toAttribute()
-    this.material.velocityNode = this.compute.velocityBuffer.toAttribute()
     this.material.colorNode = this.compute.colorBuffer.toAttribute()
 
-    this.update = this.compute.update.bind(this.compute)
+    const positionNode = this.compute.positionBuffer.toAttribute()
+    const rotationNode = this.compute.rotationBuffer.toAttribute()
+
+    this.material.positionNode = Fn(() => {
+      const position = rotate(attribute('position'), rotationNode)
+      position.mulAssign(positionNode.w.mul(this.material.size)).addAssign(positionNode)
+
+      normalLocal.assign(rotate(normalLocal, rotationNode))
+
+      return position
+    })()
+  }
+
+  async update (time) {
+    await this.compute.update(time)
   }
 
   initLights () {
