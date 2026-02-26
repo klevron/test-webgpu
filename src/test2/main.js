@@ -1,7 +1,7 @@
 import '../style.css'
 
-import { ACESFilmicToneMapping, Clock, PerspectiveCamera, Plane, PostProcessing, Raycaster, Scene, Vector3, WebGPURenderer } from 'three/webgpu'
-import { mrt, normalView, output, pass } from 'three/tsl'
+import { ACESFilmicToneMapping, PerspectiveCamera, Plane, Raycaster, RenderPipeline, Scene, Timer, Vector3, WebGPURenderer } from 'three/webgpu'
+import { mrt, normalView, output, pass, sample } from 'three/tsl'
 import { ao } from 'three/addons/tsl/display/GTAONode.js'
 import { denoise } from 'three/addons/tsl/display/DenoiseNode.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
@@ -14,12 +14,12 @@ import Particles, { defaultParams } from './Particles'
 App()
 
 function App () {
-  let renderer, scene, camera, cameraCtrl, clock
+  let renderer, scene, camera, cameraCtrl, timer
   let width, height
   let pointer
   let particles
 
-  let postprocessing
+  let renderPipeline
   let aoPass, denoisePass
 
   const time = { delta: 0, elapsed: 0 }
@@ -43,9 +43,10 @@ function App () {
 
   init()
 
-  function init () {
+  async function init () {
     renderer = new WebGPURenderer({ canvas: document.getElementById('canvas') })
     renderer.toneMapping = ACESFilmicToneMapping
+    await renderer.init()
 
     scene = new Scene()
 
@@ -58,23 +59,31 @@ function App () {
     cameraCtrl.dampingFactor = 0.1
 
     // postprocessing
-    postprocessing = new PostProcessing(renderer)
+    renderPipeline = new RenderPipeline(renderer)
     const scenePass = pass(scene, camera)
     scenePass.setMRT(mrt({ output, normal: normalView }))
     const scenePassDepth = scenePass.getTextureNode('depth')
     const scenePassNormal = scenePass.getTextureNode('normal')
     const scenePassColor = scenePass.getTextureNode('output')
+
     // ao
     aoPass = ao(scenePassDepth, scenePassNormal, camera)
     aoPass.resolutionScale = 1
     aoPass.thickness.value = 2
-    // const blendPassAO = aoPass.getTextureNode().mul(scenePassColor)
-    // denoise
-    denoisePass = denoise(aoPass.getTextureNode(), scenePassDepth, scenePassNormal, camera)
-    const blendPassDenoise = denoisePass.mul(scenePassColor)
-    postprocessing.outputNode = blendPassDenoise
 
-    clock = new Clock()
+    // denoise
+    const aoPassOutput = aoPass.getTextureNode()
+    denoisePass = denoise(aoPassOutput, scenePassDepth, scenePassNormal, camera)
+
+    // blend
+    const blendPassAO = sample((uv) => {
+      const color = scenePassColor.toVar()
+      color.rgb.mulAssign(denoisePass.r)
+      return color
+    })
+    renderPipeline.outputNode = blendPassAO
+
+    timer = new Timer()
 
     updateSize()
     window.addEventListener('resize', updateSize)
@@ -169,7 +178,9 @@ function App () {
 
   async function animate () {
     if (cameraCtrl) cameraCtrl.update()
-    time.delta = clock.getDelta()
+
+    timer.update()
+    time.delta = timer.getDelta()
 
     if (!sceneParams.pause) {
       time.elapsed += time.delta
@@ -178,8 +189,8 @@ function App () {
       await particles.update(time)
     }
 
-    // await renderer.renderAsync(scene, camera)
-    await postprocessing.renderAsync()
+    // await renderer.render(scene, camera)
+    renderPipeline.render()
   }
 
   function updateSize () {

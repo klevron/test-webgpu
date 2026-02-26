@@ -1,6 +1,6 @@
 import '../style.css'
 
-import { BoxGeometry, CircleGeometry, Clock, Color, DoubleSide, FrontSide, OctahedronGeometry, PerspectiveCamera, PlaneGeometry, PostProcessing, Scene, SphereGeometry, WebGPURenderer } from 'three/webgpu'
+import { BoxGeometry, CircleGeometry, Color, DoubleSide, FrontSide, OctahedronGeometry, PerspectiveCamera, PlaneGeometry, RenderPipeline, Scene, SphereGeometry, Timer, WebGPURenderer } from 'three/webgpu'
 import { mrt, output, pass } from 'three/tsl'
 import { bloom } from 'three/addons/tsl/display/BloomNode.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
@@ -11,11 +11,11 @@ import Particles, { defaultParams } from './Particles'
 App()
 
 function App () {
-  let renderer, scene, camera, cameraCtrl, clock
+  let renderer, scene, camera, cameraCtrl, timer
   let width, height
   let particles
 
-  let postprocessing
+  let renderPipeline
   let bloomPass
 
   const time = { delta: 0, elapsed: 0 }
@@ -37,8 +37,9 @@ function App () {
 
   init()
 
-  function init () {
+  async function init () {
     renderer = new WebGPURenderer({ canvas: document.getElementById('canvas'), antialias: true })
+    await renderer.init()
 
     scene = new Scene()
 
@@ -51,14 +52,14 @@ function App () {
     cameraCtrl.dampingFactor = 0.1
 
     // postprocessing
-    postprocessing = new PostProcessing(renderer)
+    renderPipeline = new RenderPipeline(renderer)
     const scenePass = pass(scene, camera)
     scenePass.setMRT(mrt({ output }))
     const outputPass = scenePass.getTextureNode()
     bloomPass = bloom(outputPass, 0.25, 0, 0)
-    postprocessing.outputNode = outputPass.add(bloomPass)
+    renderPipeline.outputNode = outputPass.add(bloomPass)
 
-    clock = new Clock()
+    timer = new Timer()
 
     updateSize()
     window.addEventListener('resize', updateSize)
@@ -137,7 +138,9 @@ function App () {
 
   async function animate () {
     if (cameraCtrl) cameraCtrl.update()
-    time.delta = clock.getDelta()
+
+    timer.update()
+    time.delta = timer.getDelta()
 
     if (!sceneParams.pause) {
       time.elapsed += time.delta
@@ -149,8 +152,8 @@ function App () {
       }
     }
 
-    // await renderer.renderAsync(scene, camera)
-    await postprocessing.renderAsync()
+    // renderer.render(scene, camera)
+    renderPipeline.render()
   }
 
   function updateSize () {
